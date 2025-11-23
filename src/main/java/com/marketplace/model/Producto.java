@@ -62,6 +62,9 @@ public class Producto {
 	
 	@OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<ImageProducto>listaImagenes;
+	
+	@OneToMany(mappedBy = "producto", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Mensaje>listaMensajes;
 
 	public Long getId() {
 		return id;

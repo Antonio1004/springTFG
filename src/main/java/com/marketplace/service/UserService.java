@@ -1,8 +1,10 @@
 package com.marketplace.service;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,6 +17,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.marketplace.model.PasswordResetToken;
 import com.marketplace.model.User;
@@ -41,6 +44,9 @@ public class UserService implements UserDetailsService {
     
     @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
+    
+    @Autowired
+    CloudinaryService cloudinaryService;
 
     
     @Autowired
@@ -59,6 +65,20 @@ public class UserService implements UserDetailsService {
         return userRepository.findById(id).orElse(null);
     }
     
+ // Devuelve un DTO en lugar de la entidad completa
+    public UserDTO getUserDTOById(Long id) {
+        return userRepository.findById(id)
+                .map(user -> {
+                    UserDTO dto = new UserDTO();
+                    dto.setName(user.getName());
+                    dto.setEmail(user.getEmail());
+                    dto.setPassword(user.getPassword()); // si no quieres exponer la password, omite esta línea
+                    dto.setDireccion(user.getDireccion());
+                    dto.setFoto(user.getFoto());
+                    return dto;
+                })
+                .orElse(null);
+    }
     public Optional<User> getUserByEmail(String email) {
         return userRepository.findByEmail(email);
     }
@@ -138,6 +158,7 @@ public class UserService implements UserDetailsService {
     // Convertir User a UserDTO
     private UserDTO entityToDto(User user) {
         UserDTO dto = new UserDTO();
+        dto.setId(user.getId());
         dto.setEmail(user.getEmail());
         dto.setPassword(user.getPassword());
         dto.setName(user.getName());
@@ -224,6 +245,38 @@ public class UserService implements UserDetailsService {
 
             passwordResetTokenRepository.delete(resetToken);
         }
+        
+        public void changePassword(Long userId, String newPassword) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+            user.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+        }
+        
+        
+        public UserDTO editUserProfile(Long idUser, String name, String direccion, MultipartFile file, boolean deleteFoto) throws IOException {
+            User user = userRepository.findById(idUser)
+                    .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+            if (name != null) user.setName(name);
+            if (direccion != null) user.setDireccion(direccion);
+
+            if (file != null && !file.isEmpty()) {
+                // Subir nueva foto a Cloudinary
+                Map uploadResult = cloudinaryService.upload(file);
+                String imageUrl = uploadResult.get("secure_url").toString();
+                user.setFoto(imageUrl);
+            } else if (deleteFoto) {
+                // Eliminar foto de perfil
+                user.setFoto(null);
+            }
+
+            User saved = userRepository.save(user);
+            return entityToDto(saved);
+        }
+        
+        
 }
        
 

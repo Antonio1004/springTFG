@@ -3,8 +3,11 @@ package com.marketplace.service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -14,8 +17,10 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import com.marketplace.model.ConversacionResumenDTO;
 import com.marketplace.model.Mensaje;
 import com.marketplace.model.MensajeDTO;
+import com.marketplace.model.Producto;
 import com.marketplace.model.User;
 import com.marketplace.model.UserDTO;
 import com.marketplace.repository.MensajeRepository;
@@ -28,47 +33,49 @@ public class MensajeService {
 
 	    @Autowired
 	    private UserService userService;
+	    
+	    @Autowired
+	    private ProductoService productoService;
 
 	    @Autowired
 	    private JavaMailSender mailSender;
 	    
 	    public String enviarMensaje(MensajeDTO mensajeDTO) {
-	        // Verificar que el comprador existe
-	        User comprador = userService.getUserById(mensajeDTO.getIdComprador());
+
+	        User comprador = userService.getUserById(mensajeDTO.getIdEmisor());
 	        if (comprador == null) {
 	            throw new RuntimeException("El comprador no existe");
 	        }
 
-	        // Verificar que el vendedor existe
-	        User vendedor = userService.getUserById(mensajeDTO.getIdVendedor());
+	        User vendedor = userService.getUserById(mensajeDTO.getIdReceptor());
 	        if (vendedor == null) {
 	            throw new RuntimeException("El vendedor no existe");
 	        }
 
-	        // Crear el objeto Mensaje
+	        Producto producto = productoService.getProductoById(mensajeDTO.getProductoId());
+	        if (producto == null) {
+	            throw new RuntimeException("El producto no existe");
+	        }
+
 	        Mensaje mensaje = new Mensaje();
 	        mensaje.setEmisor(comprador);
 	        mensaje.setReceptor(vendedor);
+	        mensaje.setProducto(producto);
 	        mensaje.setMensaje(mensajeDTO.getMensaje());
 	        mensaje.setLeido(false);
-	        mensaje.setFecha(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+	        mensaje.setFecha(LocalDateTime.now());
 
-	        // Guardar el mensaje en la base de datos
 	        mensajeRepository.save(mensaje);
 
-	        // Enviar correo al vendedor
 	        try {
 	            enviarCorreoVendedor(vendedor, mensaje.getId());
 	        } catch (Exception e) {
-	            e.printStackTrace();
-	            // El mensaje sigue guardado aunque falle el correo
-	            return "Mensaje guardado, pero fallo al enviar correo: " + e.getMessage();
+	            return "Mensaje guardado, pero fallo de correo";
 	        }
 
-	        return "Mensaje enviado correctamente y correo notificado";
+	        return "Mensaje enviado correctamente";
 	    }
-
-	    private void enviarCorreoVendedor(User vendedor, Long mensajeId) {
+	    private void enviarCorreoVendedor(User vendedor, Long mensajeId ) {
 	        String subject = "Nuevo mensaje en ReVende";
 	        String url = "http://localhost:4200/ver-mensaje/" + mensajeId;
 
@@ -87,30 +94,71 @@ public class MensajeService {
 	        mailSender.send(email);
 	    }
 	    
-	    // Método para marcar mensaje como leído
-	    public Mensaje marcarComoLeido(Long mensajeId) {
+	    public MensajeDTO marcarComoLeido(Long mensajeId) {
 	        Mensaje mensaje = mensajeRepository.findById(mensajeId)
 	                .orElseThrow(() -> new RuntimeException("Mensaje no encontrado"));
+	        
+	        // Marcamos como leído
 	        mensaje.setLeido(true);
-	        return mensajeRepository.save(mensaje);
+	        mensajeRepository.save(mensaje);
+
+	        // Creamos el DTO usando el constructor completo
+	        MensajeDTO dto = new MensajeDTO(
+	            mensaje.getEmisor().getId(),
+	            mensaje.getReceptor().getId(),
+	            mensaje.getProducto().getId(),         // productoId
+	            mensaje.getProducto().getTitle(),      // nombreProducto
+	            mensaje.getMensaje(),
+	            mensaje.getFecha(),
+	            mensaje.isLeido()
+	        );
+
+	        return dto;
 	    }
+
+
+	    public List<ConversacionResumenDTO> getConversaciones(Long userId) {
+	        List<Mensaje> mensajes = mensajeRepository.findMensajesRelacionados(userId);
+
+	        Map<String, ConversacionResumenDTO> conversacionesMap = new HashMap<>();
+
+	        for (Mensaje m : mensajes) {
+	            Long otroUsuarioId = m.getEmisor().getId().equals(userId) ? m.getReceptor().getId() : m.getEmisor().getId();
+	            Long productoId = m.getProducto().getId();
+	            String clave = otroUsuarioId + "-" + productoId; // clave única por usuario + producto
+
+	            // Si aún no existe, agregamos la conversación
+	            conversacionesMap.putIfAbsent(clave, new ConversacionResumenDTO(
+	                    otroUsuarioId,
+	                    productoId,
+	                    m.getEmisor().getId().equals(userId) ? m.getReceptor().getName() : m.getEmisor().getName(),
+	                    m.getProducto().getTitle()
+	            ));
+	        }
+
+	        return new ArrayList<>(conversacionesMap.values());
+	    }
+
 	    
-	    public List<UserDTO> getConversaciones(Long userId) {
-	        List<Long> ids = new ArrayList<>();
-	        ids.addAll(mensajeRepository.findReceptoresByEmisor(userId));
-	        ids.addAll(mensajeRepository.findEmisoresByReceptor(userId));
 
-	        // Eliminar duplicados
-	        Set<Long> partnerIds = new HashSet<>(ids);
+	    public List<MensajeDTO> getConversacion(Long user1Id, Long user2Id, Long productoId) {
 
-	        return partnerIds.stream()
-	                .map(id -> userService.getUserById(id))
-	                .filter(Objects::nonNull)
-	                .map(u -> new UserDTO(u.getName(), u.getEmail(), null, u.getDireccion(), u.getFoto()))
+	        List<Mensaje> mensajes = mensajeRepository
+	                .obtenerConversacionEntreUsuariosYProducto(user1Id, user2Id, productoId);
+
+	        return mensajes.stream()
+	                .sorted(Comparator.comparing(Mensaje::getFecha))
+	                .map(m -> new MensajeDTO(
+	                        m.getEmisor().getId(),
+	                        m.getReceptor().getId(),
+	                        m.getProducto().getId(),
+	                        m.getProducto().getTitle(), 
+	                        m.getMensaje(),             
+	                        m.getFecha(),
+	                        m.isLeido()
+	                ))
 	                .collect(Collectors.toList());
+
 	    }
-
-
-	    
 
 }

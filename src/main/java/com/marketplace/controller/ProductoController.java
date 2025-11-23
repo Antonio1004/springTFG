@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -62,8 +64,8 @@ public class ProductoController {
                     p.getEstado(),
                     p.getPrice(),
                     p.getDescripcion(),
-                    p.getFecha_publicacion() != null ? p.getFecha_publicacion().toString() : null,
-                    p.getFecha_venta() != null ? p.getFecha_venta().toString() : null,
+                    p.getFecha_publicacion() != null ? p.getFecha_publicacion() : null,
+                    p.getFecha_venta() != null ? p.getFecha_venta() : null,
                     p.getVendido(),
                     p.getCategoria() != null ? p.getCategoria().getId() : null,
                     p.getCategoria() != null ? p.getCategoria().getName() : null,
@@ -135,23 +137,24 @@ public class ProductoController {
                         .map(img -> new ImagenDTO(img.getId(), img.getUrl()))
                         .toList()
                     : List.of();
-
             ProductoDTO dto = new ProductoDTO(
-                    p.getId(),
-                    p.getTitle(),
-                    p.getEstado(),
-                    p.getPrice(),
-                    p.getDescripcion(),
-                    p.getFecha_publicacion() != null ? p.getFecha_publicacion().toString() : null,
-                    p.getFecha_venta() != null ? p.getFecha_venta().toString() : null,
-                    p.getVendido(),
-                    p.getCategoria() != null ? p.getCategoria().getId() : null,
-                    p.getCategoria() != null ? p.getCategoria().getName() : null,
-                    p.getVendedor() != null ? p.getVendedor().getId() : null,
-                    p.getComprador() != null ? p.getComprador().getId() : null,
-                    imagenes
-                    
-            );
+            	    p.getId(),
+            	    p.getTitle(),
+            	    p.getEstado(),
+            	    p.getPrice(),
+            	    p.getDescripcion(),
+            	    p.getFecha_publicacion() != null ? p.getFecha_publicacion() : null,
+            	    p.getFecha_venta() != null ? p.getFecha_venta() : null,
+            	    p.getVendido(),
+            	    p.getCategoria() != null ? p.getCategoria().getId() : null,
+            	    p.getCategoria() != null ? p.getCategoria().getName() : null,
+            	    p.getVendedor() != null ? p.getVendedor().getId() : null,
+            	    p.getComprador() != null ? p.getComprador().getId() : null,
+            	    p.getVendedor() != null ? p.getVendedor().getName() : null,
+            	    p.getVendedor() != null ? p.getVendedor().getFoto() : null,
+            	    imagenes
+            	);
+
 
             return ResponseEntity.ok(dto);
         } catch (Exception e) {
@@ -228,8 +231,8 @@ public class ProductoController {
                     p.getEstado(),
                     p.getPrice(),
                     p.getDescripcion(),
-                    p.getFecha_publicacion() != null ? p.getFecha_publicacion().toString() : null,
-                    p.getFecha_venta() != null ? p.getFecha_venta().toString() : null,
+                    p.getFecha_publicacion() != null ? p.getFecha_publicacion(): null,
+                    p.getFecha_venta() != null ? p.getFecha_venta(): null,
                     p.getVendido(),
                     p.getCategoria() != null ? p.getCategoria().getId() : null,
                     p.getCategoria() != null ? p.getCategoria().getName() : null,
@@ -264,7 +267,79 @@ public class ProductoController {
                     .body(Map.of("error", "Error al realizar la compra: " + e.getMessage()));
         }
     }
+    
+    @GetMapping("/mis-compras/{idComprador}")
+    public ResponseEntity<List<ProductoDTO>> getMisCompras(@PathVariable Long idComprador) {
 
+        List<Producto> productos = productoService.getAllComprasByCompradorId(idComprador);
+
+        // Convertir a DTO
+        List<ProductoDTO> productosDTO = productos.stream().map(producto -> {
+            ProductoDTO dto = new ProductoDTO();
+            dto.setId(producto.getId());
+            dto.setTitle(producto.getTitle());
+            dto.setEstado(producto.getEstado());
+            dto.setDescripcion(producto.getDescripcion());
+            dto.setPrice(producto.getPrice());
+            dto.setFecha_publicacion(producto.getFecha_publicacion());
+            dto.setFecha_venta(producto.getFecha_venta());
+            dto.setVendido(producto.getVendido());
+            dto.setCategoriaId(producto.getCategoria().getId());
+            dto.setCategoriaNombre(producto.getCategoria().getName());
+            dto.setVendedorId(producto.getVendedor().getId());
+            dto.setCompradorId(producto.getComprador().getId());
+
+            // Imágenes
+            if (producto.getListaImagenes() != null) {
+                dto.setImagenes(
+                        producto.getListaImagenes().stream().map(img ->
+                                new ImagenDTO(img.getId(), img.getUrl())
+                        ).toList()
+                );
+            }
+
+            return dto;
+        }).toList();
+
+        return ResponseEntity.ok(productosDTO);
+    }
+    
+    @GetMapping("/admin/todas")
+    public ResponseEntity<List<ProductoDTO>> getTodasPublicaciones() {
+        List<Producto> productos = productoService.getAllProductos();
+
+        List<ProductoDTO> dtos = productos.stream().map(p -> {
+            List<ImagenDTO> imagenes = p.getListaImagenes() != null ?
+                p.getListaImagenes().stream()
+                 .map(img -> new ImagenDTO(img.getId(), img.getUrl()))
+                 .toList() :
+                new ArrayList<>();
+
+            return new ProductoDTO(
+                    p.getId(),
+                    p.getTitle(),
+                    p.getEstado(),
+                    p.getPrice(),
+                    p.getDescripcion(),
+                    p.getFecha_publicacion() != null ? p.getFecha_publicacion() : null,
+                    p.getFecha_venta() != null ? p.getFecha_venta() : null,
+                    p.getVendido(),
+                    p.getCategoria() != null ? p.getCategoria().getId() : null,
+                    p.getCategoria() != null ? p.getCategoria().getName() : null,
+                    p.getVendedor() != null ? p.getVendedor().getId() : null,
+                    p.getComprador() != null ? p.getComprador().getId() : null,
+                    imagenes
+            );
+        }).toList();
+
+        return ResponseEntity.ok(dtos);
+    }
+
+    @DeleteMapping("/admin/{id}")
+    public ResponseEntity<Void> eliminarProducto(@PathVariable Long id) {
+        productoService.eliminarProducto(id);
+        return ResponseEntity.ok().build(); // devuelve 200 OK sin cuerpo
+    }
 
 
 

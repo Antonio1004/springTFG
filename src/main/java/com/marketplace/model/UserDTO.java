@@ -2,7 +2,10 @@ package com.marketplace.model;
 
 
 public class UserDTO {
-    private String name;
+	private Long id;
+   
+
+	private String name;
  	
     private String email;
  	
@@ -51,15 +54,24 @@ public class UserDTO {
 	public void setFoto(String foto) {
 		this.foto = foto;
 	}
+	 public Long getId() {
+			return id;
+		}
 
-	public UserDTO(String name, String email, String password, String direccion, String foto) {
-		super();
-		this.name = name;
-		this.email = email;
-		this.password = password;
-		this.direccion = direccion;
-		this.foto = foto;
-	}
+		public void setId(Long id) {
+			this.id = id;
+		}
+	
+
+	public UserDTO(Long id, String name, String email, String password, String direccion, String foto) {
+			super();
+			this.id = id;
+			this.name = name;
+			this.email = email;
+			this.password = password;
+			this.direccion = direccion;
+			this.foto = foto;
+		}
 
 	public UserDTO() {
 		super();

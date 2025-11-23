@@ -1,7 +1,7 @@
 package com.marketplace.model;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public class ProductoDTO {
@@ -11,25 +11,50 @@ public class ProductoDTO {
     private String estado;
     private BigDecimal price;
     private String descripcion;
-    private String fecha_publicacion;
-    private String fecha_venta;
+
+    private LocalDateTime fecha_publicacion;
+    private LocalDateTime fecha_venta;
+
     private String vendido;
 
-
-
     private Long categoriaId;
-    private String categoriaNombre; // opcional
-    private Long vendedorId;   // ID del usuario que publica
-    private Long compradorId;  // ID del comprador, puede ser null
+    private String categoriaNombre;
+    private Long vendedorId;
+    private Long compradorId;
     
-    private List<ImagenDTO> imagenes; // solo id + url
+    private String vendedorNombre;
+    private String vendedorFoto; // URL o path de la imagen
+
+
+    private List<ImagenDTO> imagenes;
 
     public ProductoDTO() {}
 
-   
     public ProductoDTO(Long id, String title, String estado, BigDecimal price, String descripcion,
-			String fecha_publicacion, String fecha_venta, String vendido, Long categoriaId, String categoriaNombre,
-			Long vendedorId, Long compradorId, List<ImagenDTO> imagenes) {
+                       LocalDateTime fecha_publicacion, LocalDateTime fecha_venta, String vendido,
+                       Long categoriaId, String categoriaNombre, Long vendedorId, Long compradorId,
+                       List<ImagenDTO> imagenes) {
+        this.id = id;
+        this.title = title;
+        this.estado = estado;
+        this.price = price;
+        this.descripcion = descripcion;
+        this.fecha_publicacion = fecha_publicacion;
+        this.fecha_venta = fecha_venta;
+        this.vendido = vendido;
+        this.categoriaId = categoriaId;
+        this.categoriaNombre = categoriaNombre;
+        this.vendedorId = vendedorId;
+        this.compradorId = compradorId;
+        this.imagenes = imagenes;
+    }
+    
+    
+
+    public ProductoDTO(Long id, String title, String estado, BigDecimal price, String descripcion,
+			LocalDateTime fecha_publicacion, LocalDateTime fecha_venta, String vendido, Long categoriaId,
+			String categoriaNombre, Long vendedorId, Long compradorId, String vendedorNombre, String vendedorFoto,
+			List<ImagenDTO> imagenes) {
 		super();
 		this.id = id;
 		this.title = title;
@@ -43,12 +68,30 @@ public class ProductoDTO {
 		this.categoriaNombre = categoriaNombre;
 		this.vendedorId = vendedorId;
 		this.compradorId = compradorId;
+		this.vendedorNombre = vendedorNombre;
+		this.vendedorFoto = vendedorFoto;
 		this.imagenes = imagenes;
 	}
 
+	// Getters y Setters
 
-	// Getters y setters
-    public String getVendido() { return vendido; }
+    public String getVendedorNombre() {
+		return vendedorNombre;
+	}
+
+	public void setVendedorNombre(String vendedorNombre) {
+		this.vendedorNombre = vendedorNombre;
+	}
+
+	public String getVendedorFoto() {
+		return vendedorFoto;
+	}
+
+	public void setVendedorFoto(String vendedorFoto) {
+		this.vendedorFoto = vendedorFoto;
+	}
+
+	public String getVendido() { return vendido; }
     public void setVendido(String vendido) { this.vendido = vendido; }
 
     public Long getId() { return id; }
@@ -66,11 +109,11 @@ public class ProductoDTO {
     public String getDescripcion() { return descripcion; }
     public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
 
-    public String getFecha_publicacion() { return fecha_publicacion; }
-    public void setFecha_publicacion(String fecha_publicacion) { this.fecha_publicacion = fecha_publicacion; }
+    public LocalDateTime getFecha_publicacion() { return fecha_publicacion; }
+    public void setFecha_publicacion(LocalDateTime fecha_publicacion) { this.fecha_publicacion = fecha_publicacion; }
 
-    public String getFecha_venta() { return fecha_venta; }
-    public void setFecha_venta(String fecha_venta) { this.fecha_venta = fecha_venta; }
+    public LocalDateTime getFecha_venta() { return fecha_venta; }
+    public void setFecha_venta(LocalDateTime fecha_venta) { this.fecha_venta = fecha_venta; }
 
     public Long getCategoriaId() { return categoriaId; }
     public void setCategoriaId(Long categoriaId) { this.categoriaId = categoriaId; }

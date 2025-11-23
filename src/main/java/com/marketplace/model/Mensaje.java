@@ -1,5 +1,7 @@
 package com.marketplace.model;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -21,7 +23,7 @@ public class Mensaje {
     private String mensaje;
  	
  	@Column(name = "fecha")
-    private String fecha;
+    private LocalDateTime fecha;
  	
  	@Column(name = "leido")
     private boolean leido;
@@ -33,8 +35,26 @@ public class Mensaje {
 	@ManyToOne
     @JoinColumn(name = "id_emisor")
     private User emisor;
+	
+	@ManyToOne
+    @JoinColumn(name = "id_producto")
+    private Producto producto;
 
-	public Mensaje(Long id, String mensaje, String fecha, boolean leido, User receptor, User emisor) {
+
+	
+	
+	
+
+	public Producto getProducto() {
+		return producto;
+	}
+
+	public void setProducto(Producto producto) {
+		this.producto = producto;
+	}
+
+	public Mensaje(Long id, String mensaje, LocalDateTime fecha, boolean leido, User receptor, User emisor,
+			Producto producto) {
 		super();
 		this.id = id;
 		this.mensaje = mensaje;
@@ -42,6 +62,7 @@ public class Mensaje {
 		this.leido = leido;
 		this.receptor = receptor;
 		this.emisor = emisor;
+		this.producto = producto;
 	}
 
 	public Mensaje() {
@@ -64,11 +85,11 @@ public class Mensaje {
 		this.mensaje = mensaje;
 	}
 
-	public String getFecha() {
+	public LocalDateTime getFecha() {
 		return fecha;
 	}
 
-	public void setFecha(String fecha) {
+	public void setFecha(LocalDateTime fecha) {
 		this.fecha = fecha;
 	}
 

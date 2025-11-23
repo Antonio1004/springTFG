@@ -46,31 +46,42 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint))
             .authorizeHttpRequests(auth -> auth
-                // Swagger abierto
-                .requestMatchers(
-                    "/swagger-ui/**",
-                    "/v3/api-docs/**",
-                    "/swagger-ui.html",
-                    "/swagger-resources/**",
-                    "/webjars/**"
-                ).permitAll()
 
-             // Registro y login públicos
-                .requestMatchers("/users/registrar", "/users/login","/users/verify","/users/forgot-password","/users/reset-password").permitAll()
+            	    // Swagger libre
+            	    .requestMatchers(
+            	        "/swagger-ui/**",
+            	        "/v3/api-docs/**",
+            	        "/swagger-ui.html",
+            	        "/swagger-resources/**",
+            	        "/webjars/**"
+            	    ).permitAll()
 
-                // DELETE a /users/** solo para ADMIN
-                .requestMatchers(HttpMethod.DELETE, "/users/**").hasRole("ADMIN")
-                
-                .requestMatchers("/mensajes/**").authenticated()
-                .requestMatchers("/mensajes/enviar-simple").permitAll()
+            	    //  Usuarios: estas rutas son públicas
+            	    .requestMatchers(
+            	        "/users/registrar",
+            	        "/users/login",
+            	        "/users/verify",
+            	        "/users/forgot-password",
+            	        "/users/reset-password"
+            	    ).permitAll()
 
-              // Rutas de productos requieren estar logueado
-              
-                .requestMatchers("/productos/**").authenticated()
-                
-                // Cualquier otra petición requiere autenticación
-                .anyRequest().permitAll()
-            );
+            	    //  Todo lo demás dentro de /users requiere login
+            	    .requestMatchers("/users/**").authenticated()
+
+            	    //  Productos requiere estar logueado
+            	    .requestMatchers("/productos/admin/**").hasRole("ADMIN")
+            	    .requestMatchers("/productos/**").authenticated()
+
+
+            	    //  Mensajes requiere estar logueado
+            	    .requestMatchers("/mensajes/**").authenticated()
+
+            	    //  Valoraciones requiere estar logueado
+            	    .requestMatchers("/valoracion/**").authenticated()
+
+            	    //  Cualquier otra ruta (si existe) permitida
+            	    .anyRequest().permitAll()
+            	);
 
         http.addFilterBefore(requestFilter, UsernamePasswordAuthenticationFilter.class);
 

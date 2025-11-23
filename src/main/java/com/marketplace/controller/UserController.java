@@ -22,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.marketplace.model.Credential;
 import com.marketplace.model.ErrorResponse;
+import com.marketplace.model.Producto;
 import com.marketplace.model.User;
 import com.marketplace.model.UserDTO;
 import com.marketplace.model.VerificationCode;
@@ -29,6 +30,7 @@ import com.marketplace.repository.UserRepository;
 import com.marketplace.repository.VerificationCodeRepository;
 import com.marketplace.security.TokenUtils;
 import com.marketplace.service.CloudinaryService;
+import com.marketplace.service.ProductoService;
 import com.marketplace.service.UserService;
 
 import java.time.LocalDateTime;
@@ -41,6 +43,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+    
+    @Autowired
+    private ProductoService productoService;
     
     @Autowired
     private UserRepository userRepository;
@@ -206,6 +211,81 @@ public class UserController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(new ErrorResponse(e.getMessage(), 400));
+        }
+    }
+    
+    @GetMapping("/get/{userId}")
+    public ResponseEntity<UserDTO> obtenerUsuario(@PathVariable Long userId) {
+        UserDTO userDTO = userService.getUserDTOById(userId);
+        if (userDTO == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(userDTO);
+    }
+    
+    @GetMapping("/vendedores-comprados/{compradorId}")
+    public ResponseEntity<List<UserDTO>> getVendedoresQueHeComprado(@PathVariable Long compradorId) {
+
+        // Obtener todos los productos comprados por el usuario
+        List<Producto> productosComprados = productoService.getAllComprasByCompradorId(compradorId);
+
+        // Extraer vendedores únicos
+        List<UserDTO> vendedores = productosComprados.stream()
+                .map(Producto::getVendedor)
+                .filter(v -> v != null)
+                .distinct()
+                .map(v -> new UserDTO(
+                        v.getId(),
+                        v.getName(),
+                        v.getEmail(),
+                        null,           // password NO SE ENVÍA
+                        v.getDireccion(),
+                        v.getFoto()
+                ))
+                .toList();
+
+        return ResponseEntity.ok(vendedores);
+    }
+    @Operation(summary = "Cambiar contraseña de usuario logueado")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Contraseña cambiada exitosamente"),
+        @ApiResponse(responseCode = "400", description = "Usuario no encontrado o datos inválidos")
+    })
+    @PatchMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @RequestParam Long idUser,
+            @RequestParam String password) {
+
+        try {
+            userService.changePassword(idUser, password);
+            return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Ocurrió un error al actualizar la contraseña"));
+        }
+    }
+
+    
+    
+    @PatchMapping("/edit-profile/{idUser}")
+    public ResponseEntity<?> editUserProfile(
+            @PathVariable Long idUser,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String direccion,
+            @RequestParam(required = false) MultipartFile file,
+            @RequestParam(required = false) Boolean deleteFoto
+    ) {
+        try {
+            UserDTO updatedUser = userService.editUserProfile(idUser, name, direccion, file, deleteFoto != null && deleteFoto);
+            return ResponseEntity.ok(updatedUser);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al actualizar perfil"));
         }
     }
 

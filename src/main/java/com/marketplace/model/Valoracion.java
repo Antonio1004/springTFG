@@ -1,6 +1,6 @@
 package com.marketplace.model;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 import jakarta.persistence.Column;
@@ -26,7 +26,7 @@ public class Valoracion {
     private String comment;
  	
  	@Column(name = "fecha")
-    private LocalDate date;
+    private LocalDateTime date;
  	
  	@ManyToOne
     @JoinColumn(name = "id_comprador")
@@ -35,7 +35,8 @@ public class Valoracion {
  	@ManyToOne
     @JoinColumn(name = "id_vendedor")
     private User vendedor;
-
+    
+    
 	public Long getId() {
 		return id;
 	}
@@ -62,11 +63,11 @@ public class Valoracion {
 		this.comment = comment;
 	}
 
-	public LocalDate getDate() {
+	public LocalDateTime getDate() {
 		return date;
 	}
 
-	public void setDate(LocalDate date) {
+	public void setDate(LocalDateTime date) {
 		this.date = date;
 	}
 
@@ -89,7 +90,7 @@ public class Valoracion {
 
 	
 
-	public Valoracion(Long id, Integer stars, String comment, LocalDate date, User comprador, User vendedor) {
+	public Valoracion(Long id, Integer stars, String comment, LocalDateTime date, User comprador, User vendedor) {
 		super();
 		this.id = id;
 		this.stars = stars;

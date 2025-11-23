@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,8 +20,11 @@ import com.marketplace.model.ProductoDTO;
 import com.marketplace.model.User;
 import com.marketplace.model.UserDTO;
 import com.marketplace.model.VerificationCode;
+import com.marketplace.repository.MensajeRepository;
 import com.marketplace.repository.ProductoRepository;
 import com.marketplace.repository.UserRepository;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class ProductoService {
@@ -36,6 +40,9 @@ public class ProductoService {
 
 	@Autowired
 	UserService userService;
+	
+	@Autowired
+	MensajeRepository mensajeRepository;
 
 	@Autowired
 	CloudinaryService cloudinaryService;
@@ -188,6 +195,29 @@ public class ProductoService {
 		return productoRepository.findAllByVendido("no");
 
 	}
+	@Transactional
+	public boolean eliminarProducto(Long id) {
+	    // Primero verificamos si el producto existe
+	    Optional<Producto> productoOpt = productoRepository.findById(id);
+	    if (productoOpt.isEmpty()) {
+	        return false; // no existe
+	    }
 
+	    // Borrar mensajes asociados al producto
+	    mensajeRepository.deleteByProductoId(id);
+
+	    // Borrar el producto (las imágenes se borran en cascada)
+	    productoRepository.deleteById(id);
+
+	    return true; // se borró correctamente
+	}
+	public List<Producto> getAllProductos() {
+	    return productoRepository.findAll();
+	}
+
+	
+	public List<Producto> getAllComprasByCompradorId(Long compradorId) {
+	    return productoRepository.findAllByCompradorId(compradorId);
+	}
 
 }
