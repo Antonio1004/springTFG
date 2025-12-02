@@ -1,10 +1,8 @@
 package com.marketplace.model;
 
-
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
-
-
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -12,206 +10,148 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
 @Table(name="Usuario")
 public class User {
-		
-	 	@Id
-	    @GeneratedValue(strategy = GenerationType.IDENTITY)
-	    private Long id;
-	 	
-	 	@Column(name = "name")
-	    private String name;
-	 	
-	 	@Column(name = "email")
-	    private String email;
-	 	
-	 	@Column(name = "password")
-	    private String password;
-	 	
-	 	@Column(name = "role")
-	    private String role;
-	 	
-	 	@Column(name = "estado_cuenta")
-	    private String estado_cuenta="pendiente";
-	 	
-		@Column(name = "direccion")
-	    private String direccion;
-	 	
-	 	@Column(name = "foto")
-	    private String foto;
-	 	
-	 	@OneToMany(mappedBy = "comprador", cascade = CascadeType.ALL, orphanRemoval = true)
-		private List<Valoracion>valoracionesHechas;
-	 	
-	 	@OneToMany(mappedBy = "vendedor", cascade = CascadeType.ALL, orphanRemoval = true)
-		private List<Valoracion>valoracionesRecibidas;
-	 	
-	 	@OneToMany(mappedBy = "comprador", cascade = CascadeType.ALL, orphanRemoval = true)
-		private List<Producto>productosComprados;
-	 	
-	 	@OneToMany(mappedBy = "vendedor", cascade = CascadeType.ALL, orphanRemoval = true)
-		private List<Producto>productosPublicados;
-	 	
-	 	@OneToMany(mappedBy = "emisor", cascade = CascadeType.ALL, orphanRemoval = true)
-		private List<Mensaje>mensajesEnviados;
-	 	
-	 	@OneToMany(mappedBy = "receptor", cascade = CascadeType.ALL, orphanRemoval = true)
-		private List<Mensaje>mensajesRecibidos;
-	 	
 
-		public Long getId() {
-			return id;
-		}
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-		public void setId(Long id) {
-			this.id = id;
-		}
+    @Column(name = "name")
+    private String name;
 
-		public String getName() {
-			return name;
-		}
+    @Column(name = "email")
+    private String email;
 
-		public void setName(String name) {
-			this.name = name;
-		}
+    @Column(name = "password")
+    private String password;
 
-		public String getEmail() {
-			return email;
-		}
+    @Column(name = "role")
+    private String role;
 
-		public void setEmail(String email) {
-			this.email = email;
-		}
+    @Column(name = "estado_cuenta")
+    private String estado_cuenta = "pendiente";
 
-		public String getPassword() {
-			return password;
-		}
+    @Column(name = "direccion")
+    private String direccion;
 
-		public void setPassword(String password) {
-			this.password = password;
-		}
+    @Column(name = "foto")
+    private String foto;
 
-		public String getRole() {
-			return role;
-		}
+    // 🔥 NUEVOS CAMPOS
+    @Column(name = "tipo_bloqueo")
+    private String tipo_bloqueo = "ninguno"; // ninguno | temporal | permanente
 
-		public void setRole(String role) {
-			this.role = role;
-		}
+    @Column(name = "fecha_fin")
+    private LocalDateTime fecha_fin; // puede ser null
 
-		public String getEstado_cuenta() {
-			return estado_cuenta;
-		}
 
-		public void setEstado_cuenta(String estado_cuenta) {
-			this.estado_cuenta = estado_cuenta;
-		}
+    @OneToMany(mappedBy = "comprador", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Valoracion> valoracionesHechas;
 
-	
+    @OneToMany(mappedBy = "vendedor", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Valoracion> valoracionesRecibidas;
 
-		public String getDireccion() {
-			return direccion;
-		}
+    @OneToMany(mappedBy = "comprador", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Producto> productosComprados;
 
-		public void setDireccion(String direccion) {
-			this.direccion = direccion;
-		}
+    @OneToMany(mappedBy = "vendedor", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Producto> productosPublicados;
 
-		public String getFoto() {
-			return foto;
-		}
+    @OneToMany(mappedBy = "emisor", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Mensaje> mensajesEnviados;
 
-		public void setFoto(String foto) {
-			this.foto = foto;
-		}
+    @OneToMany(mappedBy = "receptor", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Mensaje> mensajesRecibidos;
 
-		public List<Valoracion> getValoracionesHechas() {
-			return valoracionesHechas;
-		}
 
-		public void setValoracionesHechas(List<Valoracion> valoracionesHechas) {
-			this.valoracionesHechas = valoracionesHechas;
-		}
 
-		public List<Valoracion> getValoracionesRecibidas() {
-			return valoracionesRecibidas;
-		}
+    public User() {
+        super();
+    }
 
-		public void setValoracionesRecibidas(List<Valoracion> valoracionesRecibidas) {
-			this.valoracionesRecibidas = valoracionesRecibidas;
-		}
+    public User(Long id, String name, String email, String password, String role, String estado_cuenta,
+                String direccion, String foto, String tipo_bloqueo, LocalDateTime fecha_fin) {
+        super();
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.role = role;
+        this.estado_cuenta = estado_cuenta;
+        this.direccion = direccion;
+        this.foto = foto;
+        this.tipo_bloqueo = tipo_bloqueo;
+        this.fecha_fin = fecha_fin;
+    }
 
-		public List<Producto> getProductosComprados() {
-			return productosComprados;
-		}
+    // ------------------ GETTERS Y SETTERS ------------------
 
-		public void setProductosComprados(List<Producto> productosComprados) {
-			this.productosComprados = productosComprados;
-		}
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-		public List<Producto> getProductosPublicados() {
-			return productosPublicados;
-		}
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-		public void setProductosPublicados(List<Producto> productosPublicados) {
-			this.productosPublicados = productosPublicados;
-		}
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-		public List<Mensaje> getMensajesEnviados() {
-			return mensajesEnviados;
-		}
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 
-		public void setMensajesEnviados(List<Mensaje> mensajesEnviados) {
-			this.mensajesEnviados = mensajesEnviados;
-		}
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
 
-		public List<Mensaje> getMensajesRecibidos() {
-			return mensajesRecibidos;
-		}
+    public String getEstado_cuenta() { return estado_cuenta; }
+    public void setEstado_cuenta(String estado_cuenta) { this.estado_cuenta = estado_cuenta; }
 
-		public void setMensajesRecibidos(List<Mensaje> mensajesRecibidos) {
-			this.mensajesRecibidos = mensajesRecibidos;
-		}
+    public String getDireccion() { return direccion; }
+    public void setDireccion(String direccion) { this.direccion = direccion; }
 
-		public User() {
-			super();
-		}
+    public String getFoto() { return foto; }
+    public void setFoto(String foto) { this.foto = foto; }
 
-		public User(Long id, String name, String email, String password, String role, String estado_cuenta,
-				String direccion, String foto) {
-			super();
-			this.id = id;
-			this.name = name;
-			this.email = email;
-			this.password = password;
-			this.role = role;
-			this.estado_cuenta = estado_cuenta;
-			this.direccion = direccion;
-			this.foto = foto;
-		}
+    public String getTipo_bloqueo() { return tipo_bloqueo; }
+    public void setTipo_bloqueo(String tipo_bloqueo) { this.tipo_bloqueo = tipo_bloqueo; }
 
-		@Override
-		public int hashCode() {
-			return Objects.hash(email);
-		}
+    public LocalDateTime getFecha_fin() { return fecha_fin; }
+    public void setFecha_fin(LocalDateTime fecha_fin) { this.fecha_fin = fecha_fin; }
 
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			User other = (User) obj;
-			return Objects.equals(email, other.email);
-		}
+    public List<Valoracion> getValoracionesHechas() { return valoracionesHechas; }
+    public void setValoracionesHechas(List<Valoracion> valoracionesHechas) { this.valoracionesHechas = valoracionesHechas; }
 
-		
+    public List<Valoracion> getValoracionesRecibidas() { return valoracionesRecibidas; }
+    public void setValoracionesRecibidas(List<Valoracion> valoracionesRecibidas) { this.valoracionesRecibidas = valoracionesRecibidas; }
 
+    public List<Producto> getProductosComprados() { return productosComprados; }
+    public void setProductosComprados(List<Producto> productosComprados) { this.productosComprados = productosComprados; }
+
+    public List<Producto> getProductosPublicados() { return productosPublicados; }
+    public void setProductosPublicados(List<Producto> productosPublicados) { this.productosPublicados = productosPublicados; }
+
+    public List<Mensaje> getMensajesEnviados() { return mensajesEnviados; }
+    public void setMensajesEnviados(List<Mensaje> mensajesEnviados) { this.mensajesEnviados = mensajesEnviados; }
+
+    public List<Mensaje> getMensajesRecibidos() { return mensajesRecibidos; }
+    public void setMensajesRecibidos(List<Mensaje> mensajesRecibidos) { this.mensajesRecibidos = mensajesRecibidos; }
+
+
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(email);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
+        User other = (User) obj;
+        return Objects.equals(email, other.email);
+    }
 }

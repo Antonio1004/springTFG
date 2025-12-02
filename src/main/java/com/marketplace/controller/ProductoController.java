@@ -305,15 +305,19 @@ public class ProductoController {
     }
     
     @GetMapping("/admin/todas")
-    public ResponseEntity<List<ProductoDTO>> getTodasPublicaciones() {
-        List<Producto> productos = productoService.getAllProductos();
+    public ResponseEntity<List<ProductoDTO>> getTodasPublicacionesNoVendidas() {
+
+        List<Producto> productos = productoService.getAllProductos()
+                .stream()
+                .filter(p -> p.getVendido() != null && p.getVendido().equalsIgnoreCase("no"))
+                .toList();
 
         List<ProductoDTO> dtos = productos.stream().map(p -> {
             List<ImagenDTO> imagenes = p.getListaImagenes() != null ?
                 p.getListaImagenes().stream()
-                 .map(img -> new ImagenDTO(img.getId(), img.getUrl()))
-                 .toList() :
-                new ArrayList<>();
+                    .map(img -> new ImagenDTO(img.getId(), img.getUrl()))
+                    .toList()
+                : new ArrayList<>();
 
             return new ProductoDTO(
                     p.getId(),
@@ -335,11 +339,6 @@ public class ProductoController {
         return ResponseEntity.ok(dtos);
     }
 
-    @DeleteMapping("/admin/{id}")
-    public ResponseEntity<Void> eliminarProducto(@PathVariable Long id) {
-        productoService.eliminarProducto(id);
-        return ResponseEntity.ok().build(); // devuelve 200 OK sin cuerpo
-    }
 
 
 

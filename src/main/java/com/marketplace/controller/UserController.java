@@ -24,6 +24,7 @@ import com.marketplace.model.Credential;
 import com.marketplace.model.ErrorResponse;
 import com.marketplace.model.Producto;
 import com.marketplace.model.User;
+import com.marketplace.model.UserAdminDTO;
 import com.marketplace.model.UserDTO;
 import com.marketplace.model.VerificationCode;
 import com.marketplace.repository.UserRepository;
@@ -102,18 +103,22 @@ public class UserController {
     }
 
 
-    // ---------- Login ----------
+ // ---------- Login ----------
     @Operation(summary = "Login de usuario", description = "Autentica al usuario y devuelve un token JWT")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Login exitoso"),
-        @ApiResponse(responseCode = "401", description = "Credenciales inválidas")
+        @ApiResponse(responseCode = "401", description = "Credenciales inválidas"),
+        @ApiResponse(responseCode = "403", description = "Cuenta bloqueada permanentemente"),
+        @ApiResponse(responseCode = "423", description = "Cuenta bloqueada temporalmente")
     })
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> loginUser(@RequestBody Credential credential) {
-    	Map<String, String> response = new HashMap<>();
+        
+        Map<String, String> response = new HashMap<>();
+
         try {
-        	
-        	// Verificar que exista el usuario
+
+            // Buscar usuario por email
             Optional<User> optionalUser = userService.getUserByEmail(credential.getEmail());
             if (optionalUser.isEmpty()) {
                 response.put("error", "Usuario no encontrado");
@@ -122,15 +127,47 @@ public class UserController {
 
             User user = optionalUser.get();
 
-            // Verificar que el usuario esté activo/verificado
+            // Verificar estado de cuenta
             if (user.getEstado_cuenta().equals("pendiente")) {
-                response.put("error", "Cuenta no verificada. Revisa tu correo para activarla.");
+                response.put("error", "Cuenta no verificada. Revisa tu correo.");
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
             }
 
+            // --------- VERIFICACIÓN DE BLOQUEO ---------
+
+            // 1. Bloqueo permanente
+            if ("permanente".equalsIgnoreCase(user.getTipo_bloqueo())) {
+                response.put("error", "Cuenta bloqueada permanentemente");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+            }
+
+            // 2. Bloqueo temporal
+            if ("temporal".equalsIgnoreCase(user.getTipo_bloqueo())) {
+
+                LocalDateTime ahora = LocalDateTime.now();
+
+                // Fecha fin aún no ha pasado → SIGUE BLOQUEADO
+                if (user.getFecha_fin() != null && user.getFecha_fin().isAfter(ahora)) {
+                    response.put("error", "Cuenta bloqueada temporalmente. Revise su correo para más información");
+                    response.put("hasta", user.getFecha_fin().toString());
+                    return ResponseEntity.status(HttpStatus.LOCKED).body(response); // 423
+                }
+
+                // Si la fecha fin ya pasó → DESBLOQUEAR AUTOMÁTICAMENTE
+                if (user.getFecha_fin() != null && user.getFecha_fin().isBefore(ahora)) {
+                    user.setTipo_bloqueo("ninguno");
+                    user.setFecha_fin(null);
+                    userRepository.save(user);
+                }
+            }
+
+            // --------- AUTENTICACIÓN NORMAL ---------
+
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            credential.getEmail(), credential.getPassword()));
+                            credential.getEmail(), credential.getPassword()
+                    )
+            );
 
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 
@@ -139,7 +176,13 @@ public class UserController {
                     .map(auth -> auth.getAuthority())
                     .orElse("ROLE_USER");
 
-            String token = TokenUtils.generateToken(userDetails.getUsername(), role, user.getFoto(),user.getName(),user.getId());
+            String token = TokenUtils.generateToken(
+                    userDetails.getUsername(),
+                    role,
+                    user.getFoto(),
+                    user.getName(),
+                    user.getId()
+            );
 
             return ResponseEntity.ok(Map.of("token", token));
 
@@ -148,7 +191,7 @@ public class UserController {
                     .body(Map.of("error", "Contraseña Incorrecta"));
         }
     }
-    
+
  // ---------------- VERIFICAR CUENTA ----------------
     @GetMapping("/verify")
     public ResponseEntity<Map<String, Boolean>> verifyUser(@RequestParam("token") String token) {
@@ -190,6 +233,19 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+    
+    @Operation(summary = "Listar todos los usuarios (solo admin)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Lista devuelta correctamente"),
+            @ApiResponse(responseCode = "403", description = "No autorizado")
+    })
+    
+    @GetMapping("/list")
+    public ResponseEntity<List<UserDTO>> listAllUsers() {
+        List<UserDTO> usuarios = userService.getAllUsersDTO();
+        return ResponseEntity.ok(usuarios);
+    }
+
     
  // ---------------- RECUPERAR CONTRASEÑA ----------------
     @PostMapping("/forgot-password")
@@ -240,7 +296,10 @@ public class UserController {
                         v.getEmail(),
                         null,           // password NO SE ENVÍA
                         v.getDireccion(),
-                        v.getFoto()
+                        v.getFoto(),
+                        v.getTipo_bloqueo(),
+                        v.getFecha_fin(),
+                        v.getRole()
                 ))
                 .toList();
 
@@ -286,6 +345,45 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Error al actualizar perfil"));
+        }
+    }
+    
+    @PatchMapping("/block/{userId}")
+    public ResponseEntity<?> blockUser(
+            @PathVariable Long userId,
+            @RequestBody Map<String, Object> body) {
+
+        try {
+            String tipoBloqueo = (String) body.get("tipo_bloqueo");
+            Integer dias = body.get("dias") != null ? (Integer) body.get("dias") : 0;
+            Integer horas = body.get("horas") != null ? (Integer) body.get("horas") : 0;
+
+            userService.blockUser(userId, tipoBloqueo, dias, horas);
+
+            return ResponseEntity.ok(Map.of("message", "Usuario bloqueado correctamente"));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Error al bloquear usuario"));
+        }
+    }
+    @PostMapping("/createAdmin")
+    public ResponseEntity<?> createAdmin(@RequestBody UserAdminDTO dto) {
+        try {
+            User newAdmin = userService.createAdmin(dto);
+            return ResponseEntity.ok(Map.of(
+                    "message", "Administrador creado correctamente",
+                    "adminId", newAdmin.getId()
+            ));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al crear administrador"));
         }
     }
 

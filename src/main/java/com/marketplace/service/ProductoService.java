@@ -10,6 +10,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -49,6 +51,10 @@ public class ProductoService {
 
 	@Autowired
 	ImageProductoService imageProductoService;
+	
+	@Autowired
+	private JavaMailSender mailSender;
+
 
 	public List<Producto> getAllProductosByVendedorId(Long idVendedor) {
 		return productoRepository.findAllByVendedorId(idVendedor);
@@ -197,20 +203,28 @@ public class ProductoService {
 	}
 	@Transactional
 	public boolean eliminarProducto(Long id) {
-	    // Primero verificamos si el producto existe
+
 	    Optional<Producto> productoOpt = productoRepository.findById(id);
 	    if (productoOpt.isEmpty()) {
-	        return false; // no existe
+	        return false;
 	    }
 
-	    // Borrar mensajes asociados al producto
+	    Producto producto = productoOpt.get();
+	    User vendedor = producto.getVendedor(); // dueño del producto
+	    String tituloProducto = producto.getTitle();
+
+	    // Primero borrar mensajes asociados
 	    mensajeRepository.deleteByProductoId(id);
 
-	    // Borrar el producto (las imágenes se borran en cascada)
+	    // Borrar el producto
 	    productoRepository.deleteById(id);
 
-	    return true; // se borró correctamente
+	    // Enviar email notificando eliminación
+	    enviarCorreoProductoEliminado(vendedor, tituloProducto);
+
+	    return true;
 	}
+
 	public List<Producto> getAllProductos() {
 	    return productoRepository.findAll();
 	}
@@ -218,6 +232,25 @@ public class ProductoService {
 	
 	public List<Producto> getAllComprasByCompradorId(Long compradorId) {
 	    return productoRepository.findAllByCompradorId(compradorId);
+	}
+
+	private void enviarCorreoProductoEliminado(User vendedor, String tituloProducto) {
+
+	    String subject = "Tu publicación ha sido eliminada - ReVende";
+
+	    String text = "Hola " + vendedor.getName() + ",\n\n" +
+	                  "Te informamos que tu producto:\n\n" +
+	                  "👉 " + tituloProducto + "\n\n" +
+	                  "ha sido eliminado por un administrador del sistema.\n\n" +
+	                  "Si crees que se trata de un error, por favor contacta con soporte.\n\n" +
+	                  "Gracias por utilizar ReVende.";
+
+	    SimpleMailMessage email = new SimpleMailMessage();
+	    email.setTo(vendedor.getEmail());
+	    email.setSubject(subject);
+	    email.setText(text);
+
+	    mailSender.send(email);
 	}
 
 }

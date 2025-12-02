@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.marketplace.model.PasswordResetToken;
 import com.marketplace.model.User;
+import com.marketplace.model.UserAdminDTO;
 import com.marketplace.model.UserDTO;
 import com.marketplace.model.VerificationCode;
 import com.marketplace.repository.PasswordResetTokenRepository;
@@ -100,6 +101,8 @@ public class UserService implements UserDetailsService {
         user.setDireccion(userDto.getDireccion());
         user.setRole("ROLE_USER");
         user.setFoto(userDto.getFoto());
+        user.setTipo_bloqueo("ninguno");
+        
 
         User saved = userRepository.save(user);
         
@@ -275,8 +278,102 @@ public class UserService implements UserDetailsService {
             User saved = userRepository.save(user);
             return entityToDto(saved);
         }
+        public List<UserDTO> getAllUsersDTO() {
+            return userRepository.findAll().stream()
+                    .map(user -> new UserDTO(
+                            user.getId(),
+                            user.getName(),
+                            user.getEmail(),
+                            null,                // NO enviamos contraseña
+                            user.getDireccion(),
+                            user.getFoto(),
+                            user.getTipo_bloqueo(),
+                            user.getFecha_fin(),
+                            user.getRole()
+                    ))
+                    .toList();
+        }
+        public void blockUser(Long userId, String tipoBloqueo, int dias, int horas) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+            if (tipoBloqueo == null || tipoBloqueo.isBlank()) {
+                throw new IllegalArgumentException("Debe especificarse el tipo de bloqueo");
+            }
+
+            LocalDateTime fechaFin = null;
+
+            if ("permanente".equalsIgnoreCase(tipoBloqueo)) {
+                user.setTipo_bloqueo("permanente");
+                user.setFecha_fin(null);
+
+            } else if ("temporal".equalsIgnoreCase(tipoBloqueo)) {
+                if (dias <= 0 && horas <= 0) {
+                    throw new IllegalArgumentException("Debe especificar al menos días o horas para un bloqueo temporal");
+                }
+                LocalDateTime ahora = LocalDateTime.now();
+                fechaFin = ahora.plusDays(dias).plusHours(horas);
+
+                user.setTipo_bloqueo("temporal");
+                user.setFecha_fin(fechaFin);
+
+            } else {
+                throw new IllegalArgumentException("Tipo de bloqueo no válido. Debe ser 'temporal' o 'permanente'");
+            }
+
+            // Guardar cambios
+            userRepository.save(user);
+
+            // Enviar correo de notificación
+            enviarCorreoBloqueo(user, tipoBloqueo, fechaFin);
+        }
+
+        // Método auxiliar para enviar correo
+        private void enviarCorreoBloqueo(User user, String tipoBloqueo, LocalDateTime fechaFin) {
+            String subject = "Notificación de bloqueo de cuenta - ReVende";
+            String message;
+
+            if ("permanente".equalsIgnoreCase(tipoBloqueo)) {
+                message = "Hola " + user.getName() + ",\n\n" +
+                          "Su cuenta ha sido bloqueada permanentemente. " +
+                          "Si cree que esto es un error, contacte con el soporte.";
+            } else {
+                message = "Hola " + user.getName() + ",\n\n" +
+                          "Su cuenta estará bloqueada por incumplir nuestra política hasta " + fechaFin.toString() + ". " +
+                          "Después de esta fecha, podrá acceder nuevamente a su cuenta.";
+            }
+
+            SimpleMailMessage email = new SimpleMailMessage();
+            email.setTo(user.getEmail());
+            email.setSubject(subject);
+            email.setText(message);
+
+            mailSender.send(email);
+        }
         
-        
+        public User createAdmin(UserAdminDTO dto) {
+
+            // Comprobación básica opcional
+            if (dto.getEmail() == null || dto.getEmail().isBlank()) {
+                throw new IllegalArgumentException("El email es obligatorio");
+            }
+
+            if (userRepository.existsByEmail(dto.getEmail())) {
+                throw new IllegalArgumentException("Ya existe un usuario con este email");
+            }
+
+            User admin = new User();
+
+            admin.setName(dto.getName());
+            admin.setEmail(dto.getEmail());
+            admin.setPassword(passwordEncoder.encode(dto.getPassword()));
+            admin.setRole("ADMIN");
+            admin.setEstado_cuenta("activa");
+
+
+            return userRepository.save(admin);
+        }
+
 }
        
 

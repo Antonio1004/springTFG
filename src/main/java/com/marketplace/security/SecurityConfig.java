@@ -64,8 +64,9 @@ public class SecurityConfig {
             	        "/users/forgot-password",
             	        "/users/reset-password"
             	    ).permitAll()
-
+            	    
             	    //  Todo lo demás dentro de /users requiere login
+            	    .requestMatchers("/users/list").hasRole("ADMIN")
             	    .requestMatchers("/users/**").authenticated()
 
             	    //  Productos requiere estar logueado
