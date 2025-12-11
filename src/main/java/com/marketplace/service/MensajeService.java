@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import com.marketplace.model.ConversacionResumenDTO;
@@ -25,6 +26,9 @@ import com.marketplace.model.User;
 import com.marketplace.model.UserDTO;
 import com.marketplace.repository.MensajeRepository;
 import com.marketplace.repository.UserRepository;
+
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 
 @Service
 public class MensajeService {
@@ -75,24 +79,30 @@ public class MensajeService {
 
 	        return "Mensaje enviado correctamente";
 	    }
-	    private void enviarCorreoVendedor(User vendedor, Long mensajeId ) {
-	        String subject = "Nuevo mensaje en ReVende";
-	        String url = "http://localhost:4200/ver-mensaje/" + mensajeId;
+	    private void enviarCorreoVendedor(User vendedor, Long mensajeId) {
+	        try {
+	            MimeMessage message = mailSender.createMimeMessage();
+	            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-	        String text = "¡Hola " + vendedor.getName() + "!\n\n" +
+	            String subject = "Nuevo mensaje en ReVende";
+	            String url = "https://angular-tfg.vercel.app/ver-mensaje/" + mensajeId;
+
+	            String text = "¡Hola " + vendedor.getName() + "!\n\n" +
 	                      "Has recibido un nuevo mensaje.\n" +
 	                      "Haz clic en el siguiente enlace para leerlo:\n" +
 	                      url + "\n\n" +
 	                      "Cuando lo abras, se marcará como leído automáticamente.";
+	            helper.setTo(vendedor.getEmail());
+	            helper.setSubject(subject);
+	            helper.setText(text, true);
 
-	        SimpleMailMessage email = new SimpleMailMessage();
-	        email.setTo(vendedor.getEmail());
-	        email.setSubject(subject);
-	        email.setText(text);
+	            mailSender.send(message);
 
-	        // Este es el paso clave: usar JavaMailSender con App Password
-	        mailSender.send(email);
+	        } catch (MessagingException e) {
+	            throw new RuntimeException("Error enviando correo al vendedor", e);
+	        }
 	    }
+	   
 	    
 	    public MensajeDTO marcarComoLeido(Long mensajeId) {
 	        Mensaje mensaje = mensajeRepository.findById(mensajeId)

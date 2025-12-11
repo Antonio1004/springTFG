@@ -11,6 +11,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -27,6 +28,9 @@ import com.marketplace.model.VerificationCode;
 import com.marketplace.repository.PasswordResetTokenRepository;
 import com.marketplace.repository.UserRepository;
 import com.marketplace.repository.VerificationCodeRepository;
+
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 
 
 
@@ -183,23 +187,32 @@ public class UserService implements UserDetailsService {
         );
     }
         
+       
         private void sendVerificationEmail(User user, String token) {
-            String subject = "Verifica tu cuenta en ReVende";
-            String verificationUrl = "http://localhost:4200/verify?token=" + token;
+            try {
+                MimeMessage email = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(email, true, "UTF-8");
 
-            String message = "¡Hola " + user.getEmail() + "!\n\n" +
-                    "Gracias por registrarte en ReVende.\n" +
-                    "Haz clic en el siguiente enlace para activar tu cuenta:\n" +
-                    verificationUrl + "\n\n" +
-                    "Este enlace expirará en 24 horas.";
+                String subject = "Verifica tu cuenta en ReVende";
+                String verificationUrl = "https://angular-tfg.vercel.app/verify?token=" + token;
 
-            SimpleMailMessage email = new SimpleMailMessage();
-            email.setTo(user.getEmail());
-            email.setSubject(subject);
-            email.setText(message);
+                String message = "¡Hola " + user.getEmail() + "!\n\n" +
+                        "Gracias por registrarte en ReVende.\n" +
+                        "Haz clic en el siguiente enlace para activar tu cuenta:\n" +
+                        verificationUrl + "\n\n" +
+                        "Este enlace expirará en 24 horas.";
 
-            mailSender.send(email);
+                helper.setTo(user.getEmail());
+                helper.setSubject(subject);
+                helper.setText(message, true);
+
+                mailSender.send(email);
+
+            } catch (MessagingException e) {
+                throw new RuntimeException("Error al enviar el correo de verificación", e);
             }
+        }
+
         
         
      // ------------------- RECUPERACIÓN DE CONTRASEÑA -------------------
@@ -214,25 +227,33 @@ public class UserService implements UserDetailsService {
 
             sendPasswordResetEmail(user, token);
         }
-
+        
         private void sendPasswordResetEmail(User user, String token) {
-            String subject = "Recupera tu contraseña - ReVende";
-            String resetUrl = "http://localhost:4200/reset-password?token=" + token;
+            try {
+                MimeMessage email = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(email, true, "UTF-8");
 
-            String message = "¡Hola " + user.getEmail() + "!\n\n" +
-                    "Recibimos una solicitud para cambiar tu contraseña.\n" +
-                    "Haz clic en el siguiente enlace para establecer una nueva contraseña:\n" +
-                    resetUrl + "\n\n" +
-                    "Este enlace expirará en 24 horas.";
+                String subject = "Recupera tu contraseña - ReVende";
+                String resetUrl = "https://angular-tfg.vercel.app/reset-password?token=" + token;
 
-            SimpleMailMessage email = new SimpleMailMessage();
-            email.setTo(user.getEmail());
-            email.setSubject(subject);
-            email.setText(message);
+                String message = "¡Hola " + user.getEmail() + "!\n\n" +
+                        "Recibimos una solicitud para cambiar tu contraseña.\n" +
+                        "Haz clic en el siguiente enlace para establecer una nueva contraseña:\n" +
+                        resetUrl + "\n\n" +
+                        "Este enlace expirará en 24 horas.";
+                helper.setTo(user.getEmail());
+                helper.setSubject(subject);
+                helper.setText(message, true);
 
-            mailSender.send(email);
+                mailSender.send(email);
+
+            } catch (MessagingException e) {
+                throw new RuntimeException("Error enviando correo de recuperación", e);
+            }
         }
 
+
+       
         public void resetPassword(String token, String newPassword) {
             PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
                 .orElseThrow(() -> new IllegalArgumentException("Token inválido"));
@@ -327,29 +348,37 @@ public class UserService implements UserDetailsService {
             // Enviar correo de notificación
             enviarCorreoBloqueo(user, tipoBloqueo, fechaFin);
         }
-
-        // Método auxiliar para enviar correo
         private void enviarCorreoBloqueo(User user, String tipoBloqueo, LocalDateTime fechaFin) {
-            String subject = "Notificación de bloqueo de cuenta - ReVende";
-            String message;
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            if ("permanente".equalsIgnoreCase(tipoBloqueo)) {
-                message = "Hola " + user.getName() + ",\n\n" +
-                          "Su cuenta ha sido bloqueada permanentemente. " +
-                          "Si cree que esto es un error, contacte con el soporte.";
-            } else {
-                message = "Hola " + user.getName() + ",\n\n" +
-                          "Su cuenta estará bloqueada por incumplir nuestra política hasta " + fechaFin.toString() + ". " +
-                          "Después de esta fecha, podrá acceder nuevamente a su cuenta.";
+                String subject = "Notificación de bloqueo de cuenta - ReVende";
+
+                String cuerpo;
+
+                if ("permanente".equalsIgnoreCase(tipoBloqueo)) {
+                	cuerpo = "Hola " + user.getName() + ",\n\n" +
+                              "Su cuenta ha sido bloqueada permanentemente. " +
+                              "Si cree que esto es un error, contacte con el soporte.";
+                } else {
+                	cuerpo = "Hola " + user.getName() + ",\n\n" +
+                              "Su cuenta estará bloqueada por incumplir nuestra política hasta " + fechaFin.toString() + ". " +
+                              "Después de esta fecha, podrá acceder nuevamente a su cuenta.";
+                }
+
+                helper.setTo(user.getEmail());
+                helper.setSubject(subject);
+                helper.setText(cuerpo, true);
+
+                mailSender.send(message);
+
+            } catch (MessagingException e) {
+                throw new RuntimeException("Error enviando correo de bloqueo", e);
             }
-
-            SimpleMailMessage email = new SimpleMailMessage();
-            email.setTo(user.getEmail());
-            email.setSubject(subject);
-            email.setText(message);
-
-            mailSender.send(email);
         }
+
+      
         
         public User createAdmin(UserAdminDTO dto) {
 

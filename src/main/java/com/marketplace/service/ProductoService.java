@@ -12,6 +12,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,6 +27,8 @@ import com.marketplace.repository.MensajeRepository;
 import com.marketplace.repository.ProductoRepository;
 import com.marketplace.repository.UserRepository;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import jakarta.transaction.Transactional;
 
 @Service
@@ -233,24 +236,32 @@ public class ProductoService {
 	public List<Producto> getAllComprasByCompradorId(Long compradorId) {
 	    return productoRepository.findAllByCompradorId(compradorId);
 	}
-
+	
 	private void enviarCorreoProductoEliminado(User vendedor, String tituloProducto) {
+	    try {
+	        MimeMessage message = mailSender.createMimeMessage();
+	        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-	    String subject = "Tu publicación ha sido eliminada - ReVende";
+	        String subject = "Tu publicación ha sido eliminada - ReVende";
 
-	    String text = "Hola " + vendedor.getName() + ",\n\n" +
+	        String text = "Hola " + vendedor.getName() + ",\n\n" +
 	                  "Te informamos que tu producto:\n\n" +
 	                  "👉 " + tituloProducto + "\n\n" +
 	                  "ha sido eliminado por un administrador del sistema.\n\n" +
 	                  "Si crees que se trata de un error, por favor contacta con soporte.\n\n" +
 	                  "Gracias por utilizar ReVende.";
 
-	    SimpleMailMessage email = new SimpleMailMessage();
-	    email.setTo(vendedor.getEmail());
-	    email.setSubject(subject);
-	    email.setText(text);
+	        helper.setTo(vendedor.getEmail());
+	        helper.setSubject(subject);
+	        helper.setText(text, true);
 
-	    mailSender.send(email);
+	        mailSender.send(message);
+
+	    } catch (MessagingException e) {
+	        throw new RuntimeException("Error enviando correo de producto eliminado", e);
+	    }
 	}
+
+
 
 }
