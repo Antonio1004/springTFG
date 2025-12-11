@@ -17,7 +17,7 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
         response.addHeader("Content-Type", "application/json");
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.getWriter().write("{\"error\": \"Algo fue mal revisa la consola\"}");
+        response.getWriter().write("{\"error\": \"No estas Autorizado\"}");
     }
 
 
