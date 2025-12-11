@@ -367,12 +367,42 @@ public class UserService implements UserDetailsService {
             admin.setName(dto.getName());
             admin.setEmail(dto.getEmail());
             admin.setPassword(passwordEncoder.encode(dto.getPassword()));
-            admin.setRole("ADMIN");
+            admin.setRole("ROLE_ADMIN");
             admin.setEstado_cuenta("activa");
 
 
             return userRepository.save(admin);
         }
+        
+     // Eliminar un administrador por ID
+        public void deleteAdmin(Long adminId, Long currentUserId) {
+            // Obtener el usuario a eliminar
+            User userToDelete = userRepository.findById(adminId)
+                    .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+            // Solo se pueden eliminar administradores
+            if (!"ROLE_ADMIN".equals(userToDelete.getRole())) {
+                throw new IllegalArgumentException("Solo se pueden eliminar usuarios administradores");
+            }
+
+            // Contar cuántos administradores hay
+            long totalAdmins = userRepository.findAll().stream()
+                    .filter(u -> "ROLE_ADMIN".equals(u.getRole()))
+                    .count();
+
+            if (totalAdmins <= 1) {
+                throw new IllegalArgumentException("Debe haber al menos un administrador en la plataforma");
+            }
+
+            // Eliminar usuario
+            userRepository.delete(userToDelete);
+
+            // Si se eliminó a sí mismo, se puede retornar un flag al controller
+            if (adminId.equals(currentUserId)) {
+                throw new IllegalStateException("SELF_DELETED"); // el controller lo interpretará
+            }
+        }
+
 
 }
        

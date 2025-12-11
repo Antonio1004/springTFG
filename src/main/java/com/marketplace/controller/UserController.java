@@ -386,5 +386,37 @@ public class UserController {
                     .body(Map.of("error", "Error al crear administrador"));
         }
     }
+    
+    @DeleteMapping("/deleteAdmin/{adminId}/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteAdmin(
+            @PathVariable Long adminId,
+            @PathVariable Long userId // se pasa el ID del usuario logueado
+    ) {
+        try {
+            userService.deleteAdmin(adminId, userId);
+            return ResponseEntity.ok(Map.of("message", "Administrador eliminado correctamente"));
+
+        } catch (IllegalArgumentException e) {
+            // Aquí cambiamos la clave a 'message' para que el frontend la lea
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        } catch (IllegalStateException e) {
+            if ("SELF_DELETED".equals(e.getMessage())) {
+                // Mensaje especial para cerrar sesión
+                return ResponseEntity.ok(Map.of(
+                        "message", "Te has eliminado a ti mismo. Cierra sesión",
+                        "selfDeleted", true
+                ));
+            }
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Error al eliminar administrador"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Error al eliminar administrador"));
+        }
+    }
+
+
 
 }

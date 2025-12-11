@@ -338,6 +338,27 @@ public class ProductoController {
 
         return ResponseEntity.ok(dtos);
     }
+    @DeleteMapping("/admin/{id}")
+    public ResponseEntity<Map<String, Object>> eliminarProducto(@PathVariable Long id) {
+        try {
+            boolean eliminado = productoService.eliminarProducto(id);
+
+            if (eliminado) {
+                return ResponseEntity.ok(Map.of(
+                    "message", "Producto eliminado correctamente",
+                    "productoId", id
+                ));
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "No se encontró el producto con ID: " + id));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error al eliminar el producto: " + e.getMessage()));
+        }
+    }
+
 
 
 

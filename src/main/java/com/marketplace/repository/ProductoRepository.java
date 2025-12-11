@@ -12,6 +12,8 @@ public interface ProductoRepository extends JpaRepository<Producto, Long>{
 	List<Producto> findAllByVendido(String vendido);
 	List<Producto> findAllByCompradorId(Long compradorId);
     boolean existsByVendedorIdAndCompradorId(Long vendedorId, Long compradorId);
+    Long countByCategoriaId(Long categoriaId);
+
 
 
 }
